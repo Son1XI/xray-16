@@ -23,7 +23,7 @@
 #include "string_table.h"
 #include "map_manager.h"
 
-const float CSpectator::cam_inert_value = 0.7f;
+const float CSpectator::cam_inert_value = 0.0f;
 
 //--------------------------------------------------------------------
 //////////////////////////////////////////////////////////////////////

@@ -1173,6 +1173,42 @@ CSE_ALifeObjectHangingLamp::CSE_ALifeObjectHangingLamp(LPCSTR caSection)
     m_volumetric_quality = 1.0f;
     m_volumetric_intensity = 1.0f;
     m_volumetric_distance = 1.0f;
+    
+
+	flags.set(flPhysic,				READ_IF_EXISTS(pSettings, r_bool, caSection, "Flags_Physic",		false));
+	flags.set(flCastShadow,			READ_IF_EXISTS(pSettings, r_bool, caSection, "Flags_Cast_Shadow",	false));
+	flags.set(flR1,					READ_IF_EXISTS(pSettings, r_bool, caSection, "Flags_Allow_R1",	    true));
+	flags.set(flR2,					READ_IF_EXISTS(pSettings, r_bool, caSection, "Flags_Allow_R2",		true));
+	flags.set(flPointAmbient,		READ_IF_EXISTS(pSettings, r_bool, caSection, "Flags_Allow_Ambient",	false));
+	flags.set(flVolumetric,			READ_IF_EXISTS(pSettings, r_bool, caSection, "Flags_Volumetric",	false));
+	flags.set(flTypeSpot,			READ_IF_EXISTS(pSettings, r_bool, caSection, "Light_Type_Spot",		false));
+		
+	color					= (READ_IF_EXISTS(pSettings, r_u32,			caSection, "Light_Main_Color", 0));
+	brightness				= (READ_IF_EXISTS(pSettings, r_float,		caSection, "Light_Main_Brightness", 1.f));
+	color_animator			= (READ_IF_EXISTS(pSettings, r_string,		caSection, "Light_Main_Color_Animator", ""));
+	range					= (READ_IF_EXISTS(pSettings, r_float,		caSection, "Light_Main_Range", 10.f));
+	m_virtual_size		    = (READ_IF_EXISTS(pSettings, r_float,		caSection, "Light_Main_Virtual_Size", 0.1f));
+	light_texture		    = (READ_IF_EXISTS(pSettings, r_string,		caSection, "Light_Main_Texture", "lights"));
+	light_main_bone			= (READ_IF_EXISTS(pSettings, r_string,		caSection, "Light_Main_Bone", ""));
+	spot_cone_angle			= (READ_IF_EXISTS(pSettings, r_float,		caSection, "Light_Main_Cone_Angle", 0));
+	
+	m_ambient_radius		= (READ_IF_EXISTS(pSettings, r_float,		caSection, "Light_Ambient_Radius", 10.f));
+	m_ambient_power			= (READ_IF_EXISTS(pSettings, r_float,		caSection, "Light_Ambient_Power", 0.1f));
+	m_ambient_texture		= (READ_IF_EXISTS(pSettings, r_string,		caSection, "Light_Ambient_Texture", ""));
+	light_ambient_bone		= (READ_IF_EXISTS(pSettings, r_string,		caSection, "Light_Ambient_Bone", ""));
+
+	m_volumetric_quality	= (READ_IF_EXISTS(pSettings, r_float,		caSection, "Light_Volumetric_Quality", 0));
+	m_volumetric_intensity	= (READ_IF_EXISTS(pSettings, r_float,		caSection, "Light_Volumetric_Intensity", 0));
+	m_volumetric_distance	= (READ_IF_EXISTS(pSettings, r_float,		caSection, "Light_Volumetric_Distance", 0));
+
+	fixed_bones				= (READ_IF_EXISTS(pSettings, r_string,		caSection, "Model_Fixed_bones", ""));
+	glow_radius				= (READ_IF_EXISTS(pSettings, r_float,		caSection, "Glow_Radius", 0.7f));
+	glow_texture			= (READ_IF_EXISTS(pSettings, r_string,		caSection, "Glow_Texture", ""));
+	m_health				= (READ_IF_EXISTS(pSettings, r_float,		caSection, "Game_Health", 100.f));	
+
+
+	spot_cone_angle = deg2rad(spot_cone_angle);
+
 }
 
 CSE_ALifeObjectHangingLamp::~CSE_ALifeObjectHangingLamp() {}

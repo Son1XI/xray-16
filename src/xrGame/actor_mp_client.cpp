@@ -11,7 +11,7 @@
 #include "eatable_item.h"
 
 // if we are not current control entity we use this value
-const float CActorMP::cam_inert_value = 0.7f;
+const float CActorMP::cam_inert_value = 0.0f;
 
 CActorMP::CActorMP()
 {

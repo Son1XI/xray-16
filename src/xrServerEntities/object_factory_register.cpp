@@ -178,6 +178,7 @@
 #include "actor_mp_server.h"
 #include "actor_mp_client.h"
 #include "smart_cover_object.h"
+#include "capturable.h"
 #endif // NO_XR_GAME
 
 #ifndef NO_XR_GAME
@@ -403,6 +404,7 @@ void CObjectFactory::register_classes()
     ADD(CInventoryBox, CSE_ALifeInventoryBox, CLSID_INVENTORY_BOX, "inventory_box");
     ADD(smart_cover::object, CSE_SmartCover, TEXT2CLSID("SMRTCOVR"), "smart_cover");
 
+    ADD(CCapturable, CSE_ALifeObjectHangingLamp, CLSID_OBJECT_CAPTURABLE, "capturable");
 #ifndef NO_XR_GAME
     // hack, for dedicated server only
     // because we do not have scripts

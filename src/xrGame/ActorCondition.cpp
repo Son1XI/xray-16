@@ -589,35 +589,30 @@ void CActorCondition::ChangeSatiety(float value)
 
 void CActorCondition::BoostParameters(const SBooster& B)
 {
-    if (OnServer())
+    switch (B.m_type)
     {
-        switch (B.m_type)
-        {
-        case eBoostHpRestore: BoostHpRestore(B.fBoostValue); break;
-        case eBoostPowerRestore: BoostPowerRestore(B.fBoostValue); break;
-        case eBoostRadiationRestore: BoostRadiationRestore(B.fBoostValue); break;
-        case eBoostBleedingRestore: BoostBleedingRestore(B.fBoostValue); break;
-        case eBoostMaxWeight: BoostMaxWeight(B.fBoostValue); break;
-        case eBoostBurnImmunity: BoostBurnImmunity(B.fBoostValue); break;
-        case eBoostShockImmunity: BoostShockImmunity(B.fBoostValue); break;
-        case eBoostRadiationImmunity: BoostRadiationImmunity(B.fBoostValue); break;
-        case eBoostTelepaticImmunity: BoostTelepaticImmunity(B.fBoostValue); break;
-        case eBoostChemicalBurnImmunity: BoostChemicalBurnImmunity(B.fBoostValue); break;
-        case eBoostExplImmunity: BoostExplImmunity(B.fBoostValue); break;
-        case eBoostStrikeImmunity: BoostStrikeImmunity(B.fBoostValue); break;
-        case eBoostFireWoundImmunity: BoostFireWoundImmunity(B.fBoostValue); break;
-        case eBoostWoundImmunity: BoostWoundImmunity(B.fBoostValue); break;
-        case eBoostRadiationProtection: BoostRadiationProtection(B.fBoostValue); break;
-        case eBoostTelepaticProtection: BoostTelepaticProtection(B.fBoostValue); break;
-        case eBoostChemicalBurnProtection: BoostChemicalBurnProtection(B.fBoostValue); break;
-        default: NODEFAULT;
-        }
+    case eBoostHpRestore: BoostHpRestore(B.fBoostValue); break;
+    case eBoostPowerRestore: BoostPowerRestore(B.fBoostValue); break;
+    case eBoostRadiationRestore: BoostRadiationRestore(B.fBoostValue); break;
+    case eBoostBleedingRestore: BoostBleedingRestore(B.fBoostValue); break;
+    case eBoostMaxWeight: BoostMaxWeight(B.fBoostValue); break;
+    case eBoostBurnImmunity: BoostBurnImmunity(B.fBoostValue); break;
+    case eBoostShockImmunity: BoostShockImmunity(B.fBoostValue); break;
+    case eBoostRadiationImmunity: BoostRadiationImmunity(B.fBoostValue); break;
+    case eBoostTelepaticImmunity: BoostTelepaticImmunity(B.fBoostValue); break;
+    case eBoostChemicalBurnImmunity: BoostChemicalBurnImmunity(B.fBoostValue); break;
+    case eBoostExplImmunity: BoostExplImmunity(B.fBoostValue); break;
+    case eBoostStrikeImmunity: BoostStrikeImmunity(B.fBoostValue); break;
+    case eBoostFireWoundImmunity: BoostFireWoundImmunity(B.fBoostValue); break;
+    case eBoostWoundImmunity: BoostWoundImmunity(B.fBoostValue); break;
+    case eBoostRadiationProtection: BoostRadiationProtection(B.fBoostValue); break;
+    case eBoostTelepaticProtection: BoostTelepaticProtection(B.fBoostValue); break;
+    case eBoostChemicalBurnProtection: BoostChemicalBurnProtection(B.fBoostValue); break;
+    default: NODEFAULT;
     }
 }
 void CActorCondition::DisableBoostParameters(const SBooster& B)
 {
-    if (!OnServer())
-        return;
 
     switch (B.m_type)
     {
@@ -641,7 +636,11 @@ void CActorCondition::DisableBoostParameters(const SBooster& B)
     default: NODEFAULT;
     }
 }
-void CActorCondition::BoostHpRestore(const float value) { m_change_v.m_fV_HealthRestore += value; }
+void CActorCondition::BoostHpRestore(const float value)
+{
+    if (OnServer())
+        m_change_v.m_fV_HealthRestore += value;
+}
 void CActorCondition::BoostPowerRestore(const float value) { m_fV_SatietyPower += value; }
 void CActorCondition::BoostRadiationRestore(const float value) { m_change_v.m_fV_Radiation += value; }
 void CActorCondition::BoostBleedingRestore(const float value) { m_change_v.m_fV_WoundIncarnation += value; }

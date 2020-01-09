@@ -18,7 +18,10 @@ void game_sv_CaptureTheArtefact::OnPlayerBuyFinished(ClientID id_who, NET_Packet
     u16 itemsCount = 0;
     P.r_u16(itemsCount);
 
-    ps->LastBuyAcount = moneyDif;
+	bool shop_hack_detected = false;
+    if (ps->money_for_round < moneyDif)
+        shop_hack_detected = true;
+    
 
     for (u16 i = 0; i != itemsCount; ++i)
     {
@@ -26,8 +29,13 @@ void game_sv_CaptureTheArtefact::OnPlayerBuyFinished(ClientID id_who, NET_Packet
         u8 tempItemId;
         P.r_u8(tempGroupId);
         P.r_u8(tempItemId);
+        if (!shop_hack_detected)
         ps->pItemList.push_back((tempGroupId << 8) | tempItemId);
     }
+
+    if (shop_hack_detected)
+        return;
+    ps->LastBuyAcount = moneyDif;
 
     if (ps->testFlag(GAME_PLAYER_FLAG_VERY_VERY_DEAD))
     {

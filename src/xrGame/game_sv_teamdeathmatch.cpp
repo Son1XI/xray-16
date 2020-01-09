@@ -10,6 +10,10 @@
 #include "xrNetServer/NET_Messages.h"
 
 #include "ui/UIBuyWndShared.h"
+#include "Common/LevelGameDef.h"
+#include "Capturable.h"
+#include "Actor.h"
+#include "xrSurgeManager.h"
 
 //-------------------------------------------------------
 extern s32 g_sv_dm_dwFragLimit;
@@ -36,6 +40,15 @@ BOOL game_sv_TeamDeathmatch::Get_FriendlyNames() { return g_sv_tdm_bFriendlyName
 int game_sv_TeamDeathmatch::Get_TeamKillLimit() { return g_sv_tdm_iTeamKillLimit; };
 BOOL game_sv_TeamDeathmatch::Get_TeamKillPunishment() { return g_sv_tdm_bTeamKillPunishment; };
 //-------------------------------------------------------
+game_sv_TeamDeathmatch::game_sv_TeamDeathmatch()
+{
+    m_type = eGameIDTeamDeathmatch;
+    m_dwCapturableSpawnTime = Device.dwTimeGlobal;
+    // m_surge_manager = xr_new<xrSurgeManager>(this);
+}
+
+game_sv_TeamDeathmatch::~game_sv_TeamDeathmatch() { xr_delete(m_surge_manager); }
+
 void game_sv_TeamDeathmatch::Create(shared_str& options)
 {
     inherited::Create(options);
@@ -50,6 +63,41 @@ void game_sv_TeamDeathmatch::Create(shared_str& options)
     //-----------------------------------------------------------
     teams_swaped = false;
     round_end_reason = eRoundEnd_Force;
+    m_captureble_respawns.clear();
+    string_path fn_game;
+    if (FS.exist(fn_game, "$level$", "level.game"))
+    {
+        IReader* F = FS.r_open(fn_game);
+        IReader* O = 0;
+
+        // Load RPoints
+        if (0 != (O = F->open_chunk(RPOINT_CHUNK)))
+        {
+            for (int id = 0; O->find_chunk(id); ++id)
+            {
+                RPoint R;
+                u8 team;
+                u16 type;
+
+                O->r_fvector3(R.P);
+                O->r_fvector3(R.A);
+                team = O->r_u8();
+                VERIFY(team >= 0 && team < 4);
+                type = O->r_u8();
+                u16 GameType = O->r_u16();
+
+                if ((GameType & eGameIDTeamDeathmatch) && (team == 0) && (type == rptArtefactSpawn))
+                    m_captureble_respawns.push_back(R);
+            }
+            O->close();
+        }
+
+        FS.r_close(F);
+    }
+    R_ASSERT2(!m_captureble_respawns.empty(), "No points to spawn CAPTURABL");
+    Capturable_PrepareForSpawn();
+
+    // ai().script_engine().init();
 }
 
 void game_sv_TeamDeathmatch::net_Export_State(NET_Packet& P, ClientID to)
@@ -57,6 +105,7 @@ void game_sv_TeamDeathmatch::net_Export_State(NET_Packet& P, ClientID to)
     inherited::net_Export_State(P, to);
     P.w_u8(u8(Get_FriendlyIndicators()));
     P.w_u8(u8(Get_FriendlyNames()));
+    // P.w_u8			((u8)m_surge_manager->IsStarted());
 }
 
 u8 game_sv_TeamDeathmatch::AutoTeam()
@@ -117,7 +166,10 @@ u32 game_sv_TeamDeathmatch::GetPlayersCountInTeams(u8 team)
     return tmp_functor.count;
 };
 
-bool game_sv_TeamDeathmatch::TeamSizeEqual() { return GetPlayersCountInTeams(1) == GetPlayersCountInTeams(2); }
+bool game_sv_TeamDeathmatch::TeamSizeEqual()
+{
+    return (_abs(((s32)GetPlayersCountInTeams(1) - (s32)GetPlayersCountInTeams(2))) <= 2);
+}
 struct lowest_player_functor // for autoteam balance
 {
     s16 lowest_score;
@@ -225,6 +277,9 @@ void game_sv_TeamDeathmatch::OnRoundStart()
         teams_swaped = false;
     }
     inherited::OnRoundStart();
+    Capturable_PrepareForSpawn();
+    m_rpoint_random_list.clear();
+    // m_surge_manager->ReStart();
 };
 
 void game_sv_TeamDeathmatch::OnRoundEnd()
@@ -303,15 +358,14 @@ void game_sv_TeamDeathmatch::OnPlayerChangeTeam(ClientID id_who, s16 team)
     {
         if (!ps_who->team)
             team = AutoTeam();
-        else if (TeamSizeEqual())
-        {
+        else 
+        if (TeamSizeEqual())
             team = ps_who->team;
-        }
         else
-        {
             team = AutoTeam();
-        }
-    };
+    }
+    else if (!TeamSizeEqual() && Get_AutoTeamBalance())
+        team = AutoTeam();
     //-----------------------------------------------------
     NET_Packet Px;
     GenerateGameMessage(Px);
@@ -370,12 +424,12 @@ void game_sv_TeamDeathmatch::OnPlayerKillPlayer(game_PlayerState* ps_killer, gam
     }
 
     inherited::OnPlayerKillPlayer(ps_killer, ps_killed, KillType, SpecialKillType, pWeaponA);
-
+#if 0
     UpdateTeamScore(ps_killer, OldKillsKiller);
 
     if (ps_killer != ps_killed)
         UpdateTeamScore(ps_killed, OldKillsVictim);
-
+#endif
     //-------------------------------------------------------------------
     if (ps_killed && ps_killer)
     {
@@ -471,11 +525,17 @@ bool game_sv_TeamDeathmatch::OnKillResult(KILL_RES KillResult, game_PlayerState*
 
 bool game_sv_TeamDeathmatch::checkForFragLimit()
 {
-    if (g_sv_dm_dwFragLimit && ((teams[0].score >= g_sv_dm_dwFragLimit) || (teams[1].score >= g_sv_dm_dwFragLimit)))
+    if (g_sv_dm_dwFragLimit)
     {
-        OnFraglimitExceed();
-        return true;
-    };
+        for (auto& team : teams)
+        {
+            if (team.score >= g_sv_dm_dwFragLimit)
+            {
+                OnFraglimitExceed();
+                return true;
+            }
+        }
+    }
     return false;
 }
 
@@ -541,24 +601,49 @@ void game_sv_TeamDeathmatch::Update()
         }
     }
     break;
+    case GAME_PHASE_INPROGRESS:
+    {
+        // m_surge_manager->Update();
+        //---------------------------------------------------
+        if (Capturable_NeedToSpawn())
+            return;
+        if (Capturable_NeedToRemove())
+            return;
+        if (Capturable_MissCheck())
+            return;
+        if (Capturable_Update())
+            return;
+    }
+    break;
     };
 }
 extern INT g_sv_Skip_Winner_Waiting;
 bool game_sv_TeamDeathmatch::HasChampion() { return (GetTeamScore(0) != GetTeamScore(1) || g_sv_Skip_Winner_Waiting); }
+BOOL game_sv_TeamDeathmatch::OnPreCreate(CSE_Abstract* E)
+{
+#if 0
+	CSE_ALifeSpaceRestrictor* p_sSurgeCover = smart_cast<CSE_ALifeSpaceRestrictor*>(E);
+	if (p_sSurgeCover)
+		m_surge_manager->AddCover(p_sSurgeCover->ID);
+#endif
+
+    return inherited::OnPreCreate(E);
+}
+
 void game_sv_TeamDeathmatch::OnTimelimitExceed()
 {
-    u8 winning_team = (GetTeamScore(0) < GetTeamScore(1)) ? 1 : 0;
-    OnTeamScore(winning_team, false);
-    m_phase = u16((winning_team) ? GAME_PHASE_TEAM2_SCORES : GAME_PHASE_TEAM1_SCORES);
+    u8 winning_team = GetMaxScoreTeam();
+    //OnTeamScore(winning_team, false);
+    m_phase = u16(GAME_PHASE_TEAM1_SCORES + winning_team);
     switch_Phase(m_phase);
 
     OnDelayedRoundEnd(eRoundEnd_TimeLimit); //"TIME_limit"
 }
 void game_sv_TeamDeathmatch::OnFraglimitExceed()
 {
-    u8 winning_team = (GetTeamScore(0) < GetTeamScore(1)) ? 1 : 0;
-    OnTeamScore(winning_team, false);
-    m_phase = u16((winning_team) ? GAME_PHASE_TEAM2_SCORES : GAME_PHASE_TEAM1_SCORES);
+    u8 winning_team = GetMaxScoreTeam();
+    //OnTeamScore(winning_team, false);
+    m_phase = u16(GAME_PHASE_TEAM1_SCORES + winning_team);
     switch_Phase(m_phase);
 
     OnDelayedRoundEnd(eRoundEnd_FragLimit); //"FRAG_limit"
@@ -616,6 +701,21 @@ void game_sv_TeamDeathmatch::WriteGameState(CInifile& ini, LPCSTR sect, bool bRo
         xr_sprintf(buf_name, "team_%d_score", i);
         ini.w_u32(sect, buf_name, GetTeamScore(i));
     }
+}
+
+u8 game_sv_TeamDeathmatch::GetMaxScoreTeam()
+{
+    u32 max_score = 0;
+    u8 MaxScoreTeam = 0;
+    for (u8 idx = 0; idx < teams.size(); idx++)
+    {
+        if (teams[idx].score > max_score)
+        {
+            max_score = teams[idx].score;
+            MaxScoreTeam = idx;
+        }
+    }
+    return MaxScoreTeam;
 }
 
 BOOL game_sv_TeamDeathmatch::OnTouchItem(CSE_ActorMP* actor, CSE_Abstract* item)
@@ -814,3 +914,221 @@ void game_sv_TeamDeathmatch::RespawnPlayer(ClientID id_who, bool NoSpectator)
     VERIFY(ps);
     ps->resetFlag(GAME_PLAYER_FLAG_ONBASE);
 }
+
+
+u32 g_sv_newtdm_dwCapturableRespawnDelta = 1;
+u32 g_sv_newtdm_dwCapturableStayTime = 2;
+
+u32 g_sv_Score_FromCaprutrable = 1;
+u32 g_sv_CaprutrableUpdates = 5;
+u32 g_sv_MoneyForCaptureble = 500;
+
+u32 game_sv_TeamDeathmatch::Get_CapturableRespawnDelta() { return g_sv_newtdm_dwCapturableRespawnDelta; };
+u32 game_sv_TeamDeathmatch::Get_CapturableStayTime() { return g_sv_newtdm_dwCapturableStayTime; };
+
+void game_sv_TeamDeathmatch::Capturable_PrepareForSpawn()
+{
+    m_CapturebleID = u16(-1);
+    m_eCaState = NOSPAWNED;
+
+    m_dwCapturableSpawnTime = Device.dwTimeGlobal + Get_CapturableRespawnDelta() * 60000;
+
+    signal_Syncronize();
+};
+
+void game_sv_TeamDeathmatch::Capturable_PrepareForRemove()
+{
+    m_dwCapturableRemoveTime = Device.dwTimeGlobal + Get_CapturableStayTime() * 60000;
+    m_dwCapturableSpawnTime = 0;
+};
+
+bool game_sv_TeamDeathmatch::Capturable_MissCheck()
+{
+    if (m_eCaState == NONE)
+        return false;
+
+    if (m_CapturebleID != u16(-1))
+    {
+        CSE_Abstract* E = get_entity_from_eid(m_CapturebleID);
+        if (!E)
+        {
+            Capturable_PrepareForSpawn();
+            return true;
+        };
+    };
+    return false;
+}
+
+bool game_sv_TeamDeathmatch::Capturable_NeedToSpawn()
+{
+    if (m_eCaState == ON_FIELD || m_eCaState == IN_POSSESSION)
+        return false;
+
+    if (m_CapturebleID != u16(-1))
+        return false;
+
+    if (m_dwCapturableSpawnTime < Device.dwTimeGlobal)
+    {
+        m_dwCapturableSpawnTime = 0;
+        // time to spawn Artefact;
+        SpawnCapturable();
+        return true;
+    };
+    return false;
+};
+
+bool game_sv_TeamDeathmatch::Capturable_NeedToRemove()
+{
+    if (m_eCaState == IN_POSSESSION)
+        return false;
+    if (m_eCaState == NOSPAWNED)
+        return false;
+
+    if (Get_CapturableStayTime() == 0)
+        return false;
+
+    if (m_dwCapturableRemoveTime < Device.dwTimeGlobal)
+    {
+        RemoveCapturable();
+        return true;
+    };
+    return false;
+}
+
+struct TeamScore
+{
+    u8 teamID;
+    xr_vector<game_PlayerState*> players;
+    TeamScore(u8 team) { teamID = team; }
+};
+
+bool sort_function(TeamScore& i, TeamScore& j) { return (i.players.size() > j.players.size()); }
+
+bool game_sv_TeamDeathmatch::Capturable_Update()
+{
+    if (m_CapturebleID != u16(-1) && m_dwCapturableUpdateTime < Device.dwTimeGlobal)
+    {
+        m_dwCapturableUpdateTime =
+            Device.dwTimeGlobal + ((g_sv_newtdm_dwCapturableStayTime * 60000) / g_sv_CaprutrableUpdates);
+
+        CCapturable* pCapturable = smart_cast<CCapturable*>(Level().Objects.net_Find(m_CapturebleID));
+        if (!pCapturable)
+            return true;
+
+        xr_vector<TeamScore> m_teamScore;
+        u32 index = 0;
+        for (auto team : teams)
+        {
+            m_teamScore.emplace_back(index);
+            index++;
+        }
+
+        for (auto pObj : pCapturable->feel_touch)
+        {
+            CSE_Abstract* E = get_entity_from_eid(pObj->ID());
+            CSE_ALifeCreatureAbstract* pActor = smart_cast<CSE_ALifeCreatureAbstract*>(E);
+
+            if (pActor && pActor->owner && pActor->owner->ps)
+            {
+                m_teamScore[pActor->s_team - 1].players.push_back(pActor->owner->ps);
+                Player_AddMoney(pActor->owner->ps, g_sv_MoneyForCaptureble);
+            }
+        }
+
+        std::sort(m_teamScore.begin(), m_teamScore.end(), sort_function);
+        if ((m_teamScore[0].players.size() != 0) && (m_teamScore[0].players.size() != m_teamScore[1].players.size()))
+        {
+            teams[m_teamScore[0].teamID].score += g_sv_Score_FromCaprutrable;
+
+            for (auto pl : m_teamScore[0].players)
+            {
+                Player_AddExperience(pl, READ_IF_EXISTS(pSettings, r_float, "mp_bonus_exp", "target_succeed", 0));
+            }
+        }
+        signal_Syncronize();
+    }
+    return true;
+}
+
+void game_sv_TeamDeathmatch::RemoveCapturable()
+{
+    if (m_CapturebleID != u16(-1))
+    {
+        NET_Packet P;
+        //-----------------------------------------------
+        GenerateGameMessage(P);
+        P.w_u32(GAME_EVENT_CAPTURABLE_DESTROYED);
+        P.w_u16(m_CapturebleID);
+        u_EventSend(P);
+        //-----------------------------------------------
+        u_EventGen(P, GE_DESTROY, m_CapturebleID);
+        Level().Send(P, net_flags(TRUE, TRUE));
+        //-----------------------------------------------
+        m_CapturebleID = u16(-1);
+    };
+    Capturable_PrepareForSpawn();
+};
+
+void game_sv_TeamDeathmatch::SpawnCapturable()
+{
+    CSE_Abstract* E = NULL;
+    if (pSettings->line_exist("teamdeathmatch_gamedata", "capturable"))
+        E = spawn_begin(pSettings->r_string("teamdeathmatch_gamedata", "capturable"));
+    else
+        return;
+
+    E->s_flags.assign(M_SPAWN_OBJECT_LOCAL); // flags
+
+    Assign_Capturable_RPoint(E);
+
+    CSE_Abstract* af = spawn_end(E, m_server->GetServerClient()->ID);
+    m_CapturebleID = af->ID;
+    //-----------------------------------------------
+    NET_Packet P;
+    GenerateGameMessage(P);
+    P.w_u32(GAME_EVENT_CAPTURABLE_SPAWNED);
+    u_EventSend(P);
+    //-----------------------------------------------
+    m_eCaState = ON_FIELD;
+
+    Capturable_PrepareForRemove();
+
+    signal_Syncronize();
+
+    m_dwCapturableUpdateTime =
+        Device.dwTimeGlobal + (g_sv_newtdm_dwCapturableStayTime / g_sv_CaprutrableUpdates) * 1000;
+};
+
+void Randomize(size_t ids, xr_vector<size_t>& ids_out)
+{
+    xr_vector<size_t> ids_temp;
+    for (size_t id = 0; id < ids; id++)
+        ids_temp.push_back(id);
+
+    CRandom Random;
+    Random.seed(u32(CPU::QPC() & 0xfff0ffff));
+
+    while (ids_temp.size())
+    {
+        size_t ID = Random.randI((size_t)ids_temp.size());
+        ids_out.push_back(ids_temp[ID]);
+        ids_temp.erase(ids_temp.begin() + ID);
+    }
+}
+void game_sv_TeamDeathmatch::Assign_Capturable_RPoint(CSE_Abstract* E)
+{
+    R_ASSERT(E);
+
+    if (!m_rpoint_random_list.size())
+        Randomize(m_captureble_respawns.size(), m_rpoint_random_list);
+
+    u32 ID = m_rpoint_random_list.back();
+    m_rpoint_random_list.pop_back();
+#ifndef MASTER_GOLD
+    Msg("---select Capturable RPoint [%d]", ID);
+#endif // #ifndef MASTER_GOLD
+
+    RPoint r = m_captureble_respawns[ID];
+    E->o_Position.set(r.P);
+    E->o_Angle.set(r.A);
+};

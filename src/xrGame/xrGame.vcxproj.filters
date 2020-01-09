@@ -6492,6 +6492,8 @@
     <ClInclude Include="ui\UIVersionList.h">
       <Filter>UI\Multiplayer\MM_MP\VersionList</Filter>
     </ClInclude>
+    <ClInclude Include="xrSurgeManager.h" />
+    <ClInclude Include="Capturable.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="damage_manager.cpp">
@@ -9851,6 +9853,8 @@
     <ClCompile Include="ui\UIVersionList.cpp">
       <Filter>UI\Multiplayer\MM_MP\VersionList</Filter>
     </ClCompile>
+    <ClCompile Include="xrSurgeManager.cpp" />
+    <ClCompile Include="Capturable.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="ai\monsters\chimera\chimera_attack_state.h">

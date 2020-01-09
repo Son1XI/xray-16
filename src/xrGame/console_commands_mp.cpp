@@ -28,6 +28,19 @@ LPCSTR GameTypeToString(EGameIDs gt, bool bShort);
 LPCSTR AddHyphens(LPCSTR c);
 LPCSTR DelHyphens(LPCSTR c);
 
+extern u32 g_sv_newtdm_dwCapturableRespawnDelta;
+extern u32 g_sv_newtdm_dwCapturableStayTime;
+
+extern u32 g_sv_Score_FromCaprutrable;
+extern u32 g_sv_CaprutrableUpdates;
+extern u32 g_sv_MoneyForCaptureble;
+
+extern s32 sv_MIN_SURGE_TIME;
+extern s32 sv_MAX_SURGE_TIME;
+
+extern float sv_exp_coef;
+extern float sv_money_add_coef;
+
 extern float g_cl_lvInterp;
 extern int g_cl_InterpolationType; // 0 - Linear, 1 - BSpline, 2 - HSpline
 extern u32 g_cl_InterpolationMaxPoints;
@@ -2241,4 +2254,18 @@ void register_mp_console_commands()
     CMD1(CCC_GameSpyProfile, "gs_profile");
     CMD4(CCC_Integer, "sv_write_update_bin", &g_sv_write_updates_bin, 0, 1);
     CMD4(CCC_Integer, "sv_traffic_optimization_level", (int*)&g_sv_traffic_optimization_level, 0, 7);
+
+    // TDM++
+    CMD4(CCC_SV_Integer, "sv_newtdm_score_from_capturable", (int*)&g_sv_Score_FromCaprutrable, 0, 60000);
+    CMD4(CCC_SV_Integer, "sv_newtdm_caprutrable_updates", (int*)&g_sv_CaprutrableUpdates, 0, 60000);
+    CMD4(CCC_SV_Integer, "sv_newtdm_money_for_capturable", (int*)&g_sv_MoneyForCaptureble, 0, 60000);
+
+    CMD4(CCC_SV_Integer, "sv_newtdm_dwCapturableRespawnDelta", (int*)&g_sv_newtdm_dwCapturableRespawnDelta, 0, 60000);
+    CMD4(CCC_SV_Integer, "sv_newtdm_dwCapturableStayTime", (int*)&g_sv_newtdm_dwCapturableStayTime, 0, 60000);
+
+    CMD4(CCC_SV_Float, "sv_exp_coef", &sv_exp_coef, -10.f, 10.f);
+    CMD4(CCC_SV_Float, "sv_money_add_coef", &sv_money_add_coef, -10.f, 10.f);
+
+    CMD4(CCC_SV_Integer, "sv_new_tdm_min_surge_time", &sv_MIN_SURGE_TIME, 0, 60000);
+    CMD4(CCC_SV_Integer, "sv_new_tdm_max_surge_time", &sv_MAX_SURGE_TIME, 0, 60000);
 }

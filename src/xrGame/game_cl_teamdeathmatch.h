@@ -8,6 +8,8 @@ class game_cl_TeamDeathmatch : public game_cl_Deathmatch
 {
     typedef game_cl_Deathmatch inherited;
     CUIGameTDM* m_game_ui;
+    shared_str m_Eff_Ca_Spawn;
+    shared_str m_Eff_Ca_Disappear;
 
 protected:
     bool m_bFriendlyIndicators;
@@ -64,7 +66,7 @@ protected:
 
     BOOL m_bTeamSelected;
     bool m_bShowPlayersNames;
-
+    bool m_surge_in_progress;
     virtual bool CanBeReady();
     virtual void SetCurrentBuyMenu();
     virtual void SetCurrentSkinMenu();
@@ -80,6 +82,9 @@ protected:
 
     virtual void SetScore();
     virtual void OnSwitchPhase_InProgress();
+
+    virtual void OnSpawn(IGameObject* pObj);
+    virtual void OnDestroy(IGameObject* pObj);
 
     virtual u8 GetTeamCount() { return 2; };
     virtual void OnConnected();

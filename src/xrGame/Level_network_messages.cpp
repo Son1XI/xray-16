@@ -475,6 +475,9 @@ void CLevel::ClientReceive()
         case M_SECURE_MESSAGE: { OnSecureMessage(*P);
         }
         break;
+        case M_ROH_CUSTOM_NETPACKET: { game_events->insert(*P);
+        }
+        break;
         }
 
         net_msg_Release();
