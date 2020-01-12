@@ -413,8 +413,6 @@ void game_sv_GameState::Create(shared_str& options)
         FS.r_close(F);
     }
 
-    if (!GEnv.isDedicatedServer)
-    {
         // loading scripts
         auto& scriptEngine = *GEnv.ScriptEngine;
         scriptEngine.remove_script_process(ScriptProcessor::Game);
@@ -433,7 +431,6 @@ void game_sv_GameState::Create(shared_str& options)
             scriptEngine.add_script_process(ScriptProcessor::Game, scriptEngine.CreateScriptProcess("game", scripts));
         }
         xr_delete(l_tpIniFile);
-    }
 
     //---------------------------------------------------------------------
     ConsoleCommands_Create();
@@ -615,14 +612,11 @@ void game_sv_GameState::Update()
         m_item_respawner.update(Level().timeServer());
     }
 
-    if (!GEnv.isDedicatedServer)
+    if (Level().game)
     {
-        if (Level().game)
-        {
-            CScriptProcess* script_process = GEnv.ScriptEngine->script_process(ScriptProcessor::Game);
-            if (script_process)
-                script_process->update();
-        }
+        CScriptProcess* script_process = GEnv.ScriptEngine->script_process(ScriptProcessor::Game);
+        if (script_process)
+            script_process->update();
     }
 }
 

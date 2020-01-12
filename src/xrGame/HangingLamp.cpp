@@ -79,9 +79,9 @@ BOOL CHangingLamp::net_Spawn(CSE_Abstract* DC)
     // set bone id
     //	CInifile* pUserData		= K->LL_UserData();
     //	R_ASSERT3				(pUserData,"Empty HangingLamp user data!",lamp->get_visual());
-    xr_delete(CForm);
-    if (Visual())
+    if (Visual() && !CForm)
     {
+        xr_delete(CForm);
         IKinematics* K = smart_cast<IKinematics*>(Visual());
         R_ASSERT(Visual() && smart_cast<IKinematics*>(Visual()));
         light_bone = K->LL_BoneID(*lamp->light_main_bone);

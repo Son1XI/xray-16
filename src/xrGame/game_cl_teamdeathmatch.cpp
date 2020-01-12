@@ -21,6 +21,7 @@
 
 #include "game_cl_teamdeathmatch_snd_messages.h"
 #include "reward_event_generator.h"
+#include "Capturable.h"
 
 const shared_str game_cl_TeamDeathmatch::GetTeamMenu(s16 team)
 {
@@ -47,14 +48,19 @@ game_cl_TeamDeathmatch::game_cl_TeamDeathmatch()
     m_bShowPlayersNames = false;
     m_bFriendlyIndicators = false;
     m_bFriendlyNames = false;
+    m_surge_in_progress = false;
+
+    m_Eff_Ca_Spawn = "";
+    m_Eff_Ca_Disappear = "";
 
     LoadSndMessages();
 }
 void game_cl_TeamDeathmatch::Init()
 {
-    //	pInventoryMenu	= new CUIInventoryWnd();
-    //	pPdaMenu = new CUIPdaWnd();
-    //	pMapDesc = new CUIMapDesc();
+    if (pSettings->line_exist("teamdeathmatch_gamedata", "capturable_spawn_effect"))
+        m_Eff_Ca_Spawn = pSettings->r_string("teamdeathmatch_gamedata", "capturable_spawn_effect");
+    if (pSettings->line_exist("teamdeathmatch_gamedata", "capturable_disappear_effect"))
+        m_Eff_Ca_Disappear = pSettings->r_string("teamdeathmatch_gamedata", "capturable_disappear_effect");
     //-----------------------------------------------------------
     LoadTeamData(GetTeamMenu(1));
     LoadTeamData(GetTeamMenu(2));
@@ -79,6 +85,27 @@ void game_cl_TeamDeathmatch::net_import_state(NET_Packet& P)
     u16 new_phase = Phase();
     m_bFriendlyIndicators = !!P.r_u8();
     m_bFriendlyNames = !!P.r_u8();
+#if 0
+	bool is_surge_started		= !!P.r_u8();
+	if (m_surge_in_progress != is_surge_started)
+	{
+		if (is_surge_started)
+		{
+			m_surge_in_progress = true;
+			luabind::functor<void> lua_f;
+			ai().script_engine().functor("surge_manager.surge_start", lua_f);
+			lua_f();
+		}
+		else
+		{
+			m_surge_in_progress = false;
+			luabind::functor<void> lua_f;
+			ai().script_engine().functor("surge_manager.surge_end", lua_f);
+			lua_f();
+		}
+	}
+	m_surge_in_progress = is_surge_started;
+#endif
     if (!teams.empty())
     {
         if (teamsEqual)
@@ -154,7 +181,50 @@ void game_cl_TeamDeathmatch::TranslateGameMessage(u32 msg, NET_Packet& P)
         Msg("%s *s %s", pPlayer->getName(), *StringTable().translate("mp_switched_to"), CTeamInfo::GetTeam_name(int(NewTeam)));
     }
     break;
+    case GAME_EVENT_CAPTURABLE_SPAWNED: //
+    {
+        xr_sprintf(Text, "%s%s", Color_Main, *StringTable().translate("mp_capturable_spowned"));
+        if (CurrentGameUI())
+            CurrentGameUI()->CommonMessageOut(Text);
 
+        PlaySndMessage(ID_CAPTURABLE_SPAWNED);
+    }
+    break;
+    case GAME_EVENT_CAPTURABLE_DESTROYED: //
+    {
+        xr_sprintf(Text, "%s%s", Color_Main, *StringTable().translate("mp_capturable_destroyed"));
+        u16 Capturable_ID = P.r_u16();
+        //-------------------------------------------
+        IGameObject* pObj = Level().Objects.net_Find(Capturable_ID);
+        if (pObj && xr_strlen(m_Eff_Ca_Disappear))
+            PlayParticleEffect(m_Eff_Ca_Disappear.c_str(), pObj->Position());
+        //-------------------------------------------
+        if (CurrentGameUI())
+            CurrentGameUI()->CommonMessageOut(Text);
+    }
+    break;
+    case GAME_EVENT_SURGE_START: //
+    {
+        if (!GEnv.isDedicatedServer)
+        {
+            m_surge_in_progress = true;
+            luabind::functor<void> lua_f;
+            GEnv.ScriptEngine->functor("surge_manager.surge_start", lua_f);
+            lua_f();
+        }
+    }
+    break;
+    case GAME_EVENT_SURGE_END: //
+    {
+        if (!GEnv.isDedicatedServer)
+        {
+            m_surge_in_progress = false;
+            luabind::functor<void> lua_f;
+            GEnv.ScriptEngine->functor("surge_manager.surge_end", lua_f);
+            lua_f();
+        }
+    }
+    break;
     default: inherited::TranslateGameMessage(msg, P);
     };
 }
@@ -359,6 +429,8 @@ void game_cl_TeamDeathmatch::SetCurrentSkinMenu()
 bool game_cl_TeamDeathmatch::CanBeReady()
 {
     if (!local_player)
+        return false;
+    if (m_surge_in_progress)
         return false;
 
     m_bMenuCalledFromReady = TRUE;
@@ -694,6 +766,9 @@ void game_cl_TeamDeathmatch::LoadSndMessages()
     LoadSndMessage("tdm_snd_messages", "team2_rank2", ID_TEAM2_RANK_2);
     LoadSndMessage("tdm_snd_messages", "team2_rank3", ID_TEAM2_RANK_3);
     LoadSndMessage("tdm_snd_messages", "team2_rank4", ID_TEAM2_RANK_4);
+
+    LoadSndMessage("tdm_snd_messages", "capturable_spawned", ID_CAPTURABLE_SPAWNED);
+    LoadSndMessage("tdm_snd_messages", "capturable_destroyed", ID_CAPTURABLE_DESTROYED);
 };
 
 void game_cl_TeamDeathmatch::OnSwitchPhase_InProgress()
@@ -701,6 +776,27 @@ void game_cl_TeamDeathmatch::OnSwitchPhase_InProgress()
     HideBuyMenu();
     if (!m_bSkinSelected)
         m_bTeamSelected = FALSE;
+};
+
+void game_cl_TeamDeathmatch::OnSpawn(IGameObject* pObj)
+{
+    inherited::OnSpawn(pObj);
+    if (!pObj)
+        return;
+
+    CCapturable* pCaptur = smart_cast<CCapturable*>(pObj);
+    if (pCaptur)
+    {
+        if (m_Eff_Ca_Spawn.size())
+            PlayParticleEffect(m_Eff_Ca_Spawn.c_str(), pObj->Position());
+    };
+}
+
+void game_cl_TeamDeathmatch::OnDestroy(IGameObject* pObj)
+{
+    inherited::OnDestroy(pObj);
+    if (!pObj)
+        return;
 };
 
 void game_cl_TeamDeathmatch::OnSwitchPhase(u32 old_phase, u32 new_phase)

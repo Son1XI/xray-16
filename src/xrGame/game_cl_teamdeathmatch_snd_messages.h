@@ -19,5 +19,8 @@ enum
     ID_TEAM2_RANK_3,
     ID_TEAM2_RANK_4,
 
+    ID_CAPTURABLE_SPAWNED,
+    ID_CAPTURABLE_DESTROYED,
+
     ID_TDM_forcedword = u32(-1)
 };

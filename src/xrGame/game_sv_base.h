@@ -13,7 +13,7 @@
 #include "xrNetServer/empty/NET_Server.h"
 #endif
 
-#define MAX_PLAYERS_COUNT 32
+#define MAX_PLAYERS_COUNT 128
 
 enum ERoundEnd_Result
 {

@@ -362,6 +362,15 @@ void CLevel::ProcessGameEvents()
                 Game().OnGameMessage(P);
                 break;
             }
+            case M_ROH_CUSTOM_NETPACKET:
+            {
+                LPCSTR function = "network.custom_netpacket_received";
+                luabind::functor<void> functor;
+                R_ASSERT2(GEnv.ScriptEngine->functor(function, functor),
+                    "failed to call custom_netpacket_received in network.script");
+                functor(&P);
+            }
+            break;
             default:
             {
                 VERIFY(0);
@@ -551,8 +560,15 @@ void CLevel::OnFrame()
     g_pGamePersistent->Environment().m_paused = m_bEnvPaused;
 #endif
     g_pGamePersistent->Environment().SetGameTime(GetEnvironmentGameDayTimeSec(), game->GetEnvironmentGameTimeFactor());
+#if 0
     if (!GEnv.isDedicatedServer)
+    {
         GEnv.ScriptEngine->script_process(ScriptProcessor::Level)->update();
+    	luabind::functor<void> func;
+		GEnv.ScriptEngine.functor("level_script.Update", func);
+		func();
+    }
+#endif
     m_ph_commander->update();
     m_ph_commander_scripts->UpdateDeferred();
     m_ph_commander_scripts->update();
@@ -652,8 +668,9 @@ void CLevel::OnRender()
     if (ai().get_level_graph())
         levelGraphDebugRender->Render(ai().game_graph(), ai().level_graph());
 #ifdef DEBUG_PRECISE_PATH
-    test_precise_path();
 #endif
+    test_precise_path();
+
     if (stalker)
     {
         stalker->OnRender();

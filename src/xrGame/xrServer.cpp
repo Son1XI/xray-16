@@ -28,6 +28,7 @@
 #pragma warning(push)
 #pragma warning(disable : 4995)
 #include <malloc.h>
+#include "xrScriptEngine/functor.hpp"
 #pragma warning(pop)
 
 u32 g_sv_traffic_optimization_level = eto_none;
@@ -426,6 +427,15 @@ u32 xrServer::OnDelayedMessage(NET_Packet& P, ClientID sender) // Non-Zero means
     }
     break;
     case M_FILE_TRANSFER: { m_file_transfers->on_message(&P, sender);
+    }
+    break;
+    case M_ROH_CUSTOM_NETPACKET:
+    {
+        LPCSTR function = "network.custom_netpacket_received";
+        luabind::functor<void> functor;
+        R_ASSERT2(GEnv.ScriptEngine->functor(function, functor),
+            "failed to call custom_netpacket_received in network.script");
+        functor(&P);
     }
     break;
     }

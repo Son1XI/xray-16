@@ -42,6 +42,7 @@
 #include "raypick.h"
 #include "xrCDB/xr_collide_defs.h"
 #include "xrNetServer/NET_Messages.h"
+#include "xrMessages.h"
 
 using namespace luabind;
 using namespace luabind::policy;
@@ -573,6 +574,33 @@ void stop_tutorial()
 LPCSTR translate_string(LPCSTR str) { return *StringTable().translate(str); }
 bool has_active_tutotial() { return (g_tutorial != NULL); }
 
+void SendPacket_from_script(NET_Packet& P)
+{
+    // Msg("Packet address = %X or %X", &P, P);
+    u16 type;
+    P.r_begin(type);
+
+    //Проверка на хедер 133, нужно чтобы при приеме вызвать функцию в скриптах
+    if (type != M_ROH_CUSTOM_NETPACKET)
+    {
+        Msg("ERROR: Прежде чем отправлять пакет, записать в хедер: u16 == 133");
+        return;
+    }
+
+    if (OnServer())
+    {
+        // Msg("Мы на серве - отправляем броадкаст");
+        Level().Server->SendBroadcast(Level().Server->GetServerClient()->ID, P, net_flags(FALSE, TRUE));
+        return;
+    }
+    if (OnClient())
+    {
+        Msg("Мы на клиенте - отправляем серву");
+        Level().Send(P);
+        return;
+    }
+}
+
 // Alundaio: namespace level exports extension
 // ability to update level netpacket
 void g_send(NET_Packet& P, bool bReliable = false, bool bSequential = true, bool bHighPriority = false, bool bSendImmediately = false)
@@ -829,6 +857,7 @@ IC static void CLevel_Export(lua_State* luaState)
 
     module(luaState, "game")
     [
+        def("send_packet", SendPacket_from_script),
         class_<xrTime>("CTime")
             .enum_("date_format")
             [

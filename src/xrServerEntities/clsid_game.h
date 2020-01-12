@@ -231,3 +231,5 @@ constexpr CLASS_ID CLSID_DETECTOR_VISUAL = MK_CLSID('D','_','V','I','S','D','E',
 #define CLSID_GAME_UI_CAPTURETHEARTEFACT MK_CLSID('U', 'I', '_', 'C', 'T', 'A', ' ', ' ')
 
 #define CLSID_ONLINE_OFFLINE_GROUP MK_CLSID('O', 'N', '_', 'O', 'F', 'F', '_', 'G')
+
+#define CLSID_OBJECT_CAPTURABLE MK_CLSID('O', '_', 'C', 'A', 'P', 'T', 'U', 'R')

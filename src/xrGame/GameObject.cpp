@@ -374,10 +374,12 @@ void CGameObject::OnEvent(NET_Packet& P, u16 type)
         IGameObject* Hitter = Level().Objects.net_Find(HDS.whoID);
         IGameObject* Weapon = Level().Objects.net_Find(HDS.weaponID);
         HDS.who = Hitter;
-        if (!HDS.who)
-        {
-            Msg("! ERROR: hitter object [%d] is NULL on client.", HDS.whoID);
-        }
+        if (!Hitter)
+            Msg("! ERROR: hitter [%d] is NULL on client.", HDS.whoID);
+        if (!Weapon)
+            Msg("! ERROR: hitter object [%d] is NULL on client.", HDS.weaponID);
+        if (!Hitter || !Weapon)
+            return;
         //-------------------------------------------------------
         switch (HDS.PACKET_TYPE)
         {
@@ -528,12 +530,12 @@ BOOL CGameObject::net_Spawn(CSE_Abstract* DC)
     }
 
     reload(*cNameSect());
-    if (!GEnv.isDedicatedServer)
-        scriptBinder.reload(*cNameSect());
+    //if (!GEnv.isDedicatedServer)
+        //scriptBinder.reload(*cNameSect());
 
     reinit();
-    if (!GEnv.isDedicatedServer)
-        scriptBinder.reinit();
+    //if (!GEnv.isDedicatedServer)
+        //scriptBinder.reinit();
 #ifdef DEBUG
     if (ph_dbg_draw_mask1.test(ph_m1_DbgTrackObject) && xr_stricmp(PH_DBG_ObjectTrackName(), *cName()) == 0)
     {

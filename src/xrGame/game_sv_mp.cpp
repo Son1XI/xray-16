@@ -43,6 +43,8 @@ BOOL g_sv_mp_save_proxy_configs = FALSE;
 u32 g_sv_adm_menu_ban_time = 1;
 int g_sv_adm_menu_ping_limit = 25;
 //-----------------------------------------------------------------
+float sv_exp_coef = 1.f;
+float sv_money_add_coef = 1.f;
 
 extern const xr_token round_end_result_str[];
 
@@ -1640,7 +1642,7 @@ void game_sv_mp::Player_AddExperience(game_PlayerState* ps, float Exp)
 {
     if (!ps)
         return;
-
+    Exp *= sv_exp_coef;
     ps->experience_New += Exp;
 
     if (Player_Check_Rank(ps) && Player_RankUp_Allowed())
@@ -1670,6 +1672,7 @@ void game_sv_mp::Player_Rank_Up(game_PlayerState* ps)
         return;
 
     ps->rank++;
+    signal_Syncronize();
     Player_AddBonusMoney(ps, m_aRanks[ps->rank].m_iBonusMoney, SKT_NEWRANK);
     Player_ExperienceFin(ps);
 };
@@ -1764,6 +1767,7 @@ void game_sv_mp::Player_AddMoney(game_PlayerState* ps, s32 MoneyAmount)
 {
     if (!ps)
         return;
+    MoneyAmount *= sv_money_add_coef;
     TeamStruct* pTeam = GetTeamData(u8(ps->team));
 
     s64 TotalMoney = ps->money_for_round;

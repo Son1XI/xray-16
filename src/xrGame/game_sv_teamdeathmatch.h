@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game_sv_deathmatch.h"
-
+class xrSurgeManager;
 class game_sv_TeamDeathmatch : public game_sv_Deathmatch
 {
 private:
@@ -9,6 +9,9 @@ private:
     bool teams_swaped;
 
 protected:
+
+    xrSurgeManager* m_surge_manager;
+
     virtual bool checkForFragLimit();
     virtual bool HasChampion();
 
@@ -17,7 +20,8 @@ protected:
     virtual void ConsoleCommands_Clear();
 
 public:
-    game_sv_TeamDeathmatch() : teams_swaped(false) { m_type = eGameIDTeamDeathmatch; }
+    game_sv_TeamDeathmatch();
+    virtual ~game_sv_TeamDeathmatch();
     virtual void Create(shared_str& options);
 
     virtual void OnEvent(NET_Packet& tNetPacket, u16 type, u32 time, ClientID sender);
@@ -37,6 +41,7 @@ public:
         SPECIAL_KILL_TYPE SpecialKillType, CSE_Abstract* pWeaponA);
     virtual void UpdateTeamScore(game_PlayerState* ps_killer, s16 OldKills);
     virtual bool CheckTeams() { return true; };
+    virtual BOOL OnPreCreate(CSE_Abstract* E);
     virtual void OnPlayerHitPlayer(u16 id_hitter, u16 id_hitted, NET_Packet& P);
     virtual void OnPlayerHitPlayer_Case(game_PlayerState* ps_hitter, game_PlayerState* ps_hitted, SHit* pHitS);
 
@@ -77,7 +82,37 @@ public:
     void OnObjectEnterTeamBase(u16 id, u16 zone_team);
     void OnObjectLeaveTeamBase(u16 id, u16 zone_team);
     virtual void RespawnPlayer(ClientID id_who, bool NoSpectator);
+    u32 Get_CapturableRespawnDelta();
+    u32 Get_CapturableStayTime();
+    void Capturable_PrepareForSpawn();
+    void Capturable_PrepareForRemove();
+    bool Capturable_MissCheck();
+    bool Capturable_NeedToSpawn();
+    bool Capturable_Update();
+    bool Artefact_NeedToRemove();
+    bool Capturable_NeedToRemove();
+    void RemoveCapturable();
+    void SpawnCapturable();
+    void Assign_Capturable_RPoint(CSE_Abstract* E);
+
+    enum CAPTURABLE_STATE
+    {
+        NONE,
+        NOSPAWNED,
+        ON_FIELD,
+        IN_POSSESSION,
+    };
+    CAPTURABLE_STATE m_eCaState;
+    u32 m_dwCapturableSpawnTime;
+    u32 m_dwCapturableRemoveTime;
+
+    xr_vector<RPoint> m_captureble_respawns;
+    u16 m_CapturebleID;
+    u32 m_dwCapturableUpdateTime;
+
+    xr_vector<size_t> m_rpoint_random_list;
 
 protected:
     virtual void WriteGameState(CInifile& ini, LPCSTR sect, bool bRoundResult);
+    u8 GetMaxScoreTeam();
 };

@@ -33,7 +33,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(SolutionDir)Common.props" />
   <PropertyGroup Label="Globals">
-    <WindowsTargetPlatformVersion>$(xrTargetPlatform)</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -191,6 +191,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)xrServerEntities;$(xrExternals)ode/include;$(xrExternals)OpenAutomate\inc;$(xrExternals)CxImage;$(xrExternals)pugixml\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_USRDLL;XRGAME_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4237;4250;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
     <Link>
       <DelayLoadDLLs>AnselSDK$(PlatformArchitecture).dll;</DelayLoadDLLs>
@@ -764,6 +765,7 @@
     <ClInclude Include="CameraFirstEye.h" />
     <ClInclude Include="CameraLook.h" />
     <ClInclude Include="CameraRecoil.h" />
+    <ClInclude Include="Capturable.h" />
     <ClInclude Include="CaptureBoneCallback.h" />
     <ClInclude Include="Car.h" />
     <ClInclude Include="CarDamageParticles.h" />
@@ -1617,6 +1619,7 @@
     <ClInclude Include="xrServer_info.h" />
     <ClInclude Include="xrServer_svclient_validation.h" />
     <ClInclude Include="xrServer_updates_compressor.h" />
+    <ClInclude Include="xrSurgeManager.h" />
     <ClInclude Include="xr_level_controller.h" />
     <ClInclude Include="xr_time.h" />
     <ClInclude Include="ZoneCampfire.h" />
@@ -2251,6 +2254,7 @@
     <ClCompile Include="CameraEffector.cpp" />
     <ClCompile Include="CameraFirstEye.cpp" />
     <ClCompile Include="CameraLook.cpp" />
+    <ClCompile Include="Capturable.cpp" />
     <ClCompile Include="Car.cpp" />
     <ClCompile Include="CarCameras.cpp" />
     <ClCompile Include="CarDamageParticles.cpp" />
@@ -3683,6 +3687,7 @@
     <ClCompile Include="xrServer_sls_clear.cpp" />
     <ClCompile Include="xrServer_svclient_validation.cpp" />
     <ClCompile Include="xrServer_updates_compressor.cpp" />
+    <ClCompile Include="xrSurgeManager.cpp" />
     <ClCompile Include="xr_level_controller.cpp" />
     <ClCompile Include="xr_time.cpp" />
     <ClCompile Include="ZoneCampfire.cpp" />
