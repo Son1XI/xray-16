@@ -669,7 +669,7 @@ void CLevel::OnRender()
         levelGraphDebugRender->Render(ai().game_graph(), ai().level_graph());
 #ifdef DEBUG_PRECISE_PATH
 #endif
-    test_precise_path();
+    //test_precise_path();
 
     if (stalker)
     {
